@@ -1,6 +1,6 @@
 from LexicalAnalysis import *
 from constants import *
-
+from AbstractSyntaxTree import *
 '''
 P -> exists(VL P)  |  P and P  | P or P  | E cmp E | not P
 VL -> x, | x,VL
@@ -16,24 +16,30 @@ i=0
 #VL (or variable list) is a sequence of the form v1, v2, ..., vN
 
 
+
 def VL(L):
 	global i
-	
-	if( not(L[i].typ==VAR and L[i+1].typ==COMA) ):
-		return False
+	VarList=[]
+		
 	while(L[i].typ==VAR and L[i+1].typ==COMA):
+		VarList.append(AST(L[i],[]))
 		print(L[i].val)
 		print(L[i+1].val)
 		i+=2
+	if(L[i].typ!=VAR):
+		return False
+	VarList.append(AST(L[i],[]))
 	print(L[i].val)
 	i+=1
 	if(L[i].typ!=ST):
+		print("B")
 		return False
 	print(L[i].val)
 	i+=1
-	return True
-		
-		
+	print(VarList)
+	return VarList
+
+
 #P -> exists(VL P)  | P and P | P or P | not P
 
 
@@ -41,13 +47,16 @@ def VL(L):
 def P(L):
 	global i
 	if(i==len(L)):
-		return True
+		return None
 	elif(L[i].typ==OP):
 		print(L[i].val)
 		i+=1
-		if(not P(L)):
+		F1=P(L)
+		if(F1==False):
+			print("C")
 			return False
 		if(not(L[i].typ==CP)):
+			print("D")
 			return False
 		print(L[i].val)
 		i+=1
@@ -55,14 +64,24 @@ def P(L):
 		print(L[i].val)
 		i+=1
 		if(not L[i].typ==OP):
+			print("E")
 			return False
 		print(L[i].val)
 		i+=1
-		if(not VL(L)):
+		VarList=VL(L)
+		
+		if(VarList==False):
+			print("F")
 			return False
-		if(not P(L)):
+		F1=P(L)
+		F1.DepthWalk()
+		if(F1==False):
+			print("G")
 			return False
+		VarList.append(F1)
+		F1=AST(Lexema(EXQ,"exists"),VarList)
 		if(L[i].typ!=CP):
+			print("H")
 			return False	
 		print(L[i].val)	
 		i+=1
@@ -70,122 +89,147 @@ def P(L):
 		print(L[i].val)
 		i+=1
 		if(L[i].typ!=OP):
+			print("I")
 			return False
 		print(L[i].val)
 		i+=1
-		if(not P(L)):
+		F1=P(L)
+		if(F1==False):
+			print("J")
 			return False
+		F1=AST(Lexema(NOT,"not"),[F1])
 		if(not L[i].typ==CP):
+			print("K")
 			return False
 		print(L[i].val)
 		i+=1
-	elif( not(SEQCMP(L)) ):
-		return False
+	else:
+		F1=SEQCMP(L)
+		if(F1==False):
+			print("L")
+			return False
+		
+		
 	if(i==len(L)):
-		return True
+		return F1
 	if(L[i].IsBoolOperator()):
+		Operator=L[i]
 		print(L[i].val)
 		i+=1
-		return P(L) 
-	return i==len(L)
+		F2=P(L)
+		if(F2==False):
+			print("M")
+			return False
+		return AST(Operator,[F1,F2])
+	
+	return F1
 
 #SEQCMP -> E <= E | E = E | E < E ...
 
 def SEQCMP(L):
 	global i
-	if(not E(L)):
+	F1=E(L)
+	if(F1==False):
+		print("O")
 		return False
+	Operator=L[i]
 	if(not L[i].IsCmpOperator()):
+		print("P")
 		return False
 	print(L[i].val)
 	i+=1
-	if(not E(L)):
+	F2=E(L)
+	if(F2==False):
+		print("Q")
 		return False
-	if L[i].IsCmpOperator():
-		print(L[i].val)
-		i+=1
-		return SEQCMP(L)
-	return True
+	return AST(Operator,[F1,F2])
 
-#SEQBOOL -> SEQCMP | SEQCMP or SEQBOOL | SEQCMP and SEQBOOL
-	
-
-def SEQP(L):
-	global i
-	if(not P(L)):
-		return False
-	if(i==len(L)):
-		return True
-	if(L[i].typ==AND or L[i].typ==OR):
-		print(L[i].val)
-		i+=1
-	
-	return SEQCMP(L)
-	
 		
 		
 #E -> T + E | T - E  | T 
 
 def E(L):
 	global i
-	
-	if(not T(L)):
+	F1=T(L)
+	if(F1==False):
+		print("R")
 		return False
 		
 	
 	if(i==len(L)):
-		return True
-		
+		return F1
+	
 	if(L[i].typ==PLUS or L[i].typ==MINUS):
+		Operator=L[i]
 		print(L[i].val)
 		i+=1	
-		if(not E(L)):
+		F2=E(L)
+		if(F2==False):
+			print("S")
 			return False
-	return True
+		return AST(Operator,[F1,F2])
+	return F1
 
 #T -> T * F  | TF | F
 
 def T(L):
 	global i
-	if(not F(L)):
+	F1=F(L)
+	if(F1==False):
+		print("T")
 		return False
 	if(i==len(L)):
-		return True
+		return F1
 	if(L[i].typ == MULT):
+		Operator=L[i]
 		print(L[i].val)
 		i+=1
-		if(not F(L)):
+		F2=F(L)
+		if(F2==False):
+			print("U")
 			return False
+		return AST(Operator,[F1,F2])
 	if(i==len(L)):
-		return True
+		return F1
 	if(L[i].typ == VAR):
-		return F(L)
-	return True
+		F2=F(L)
+		if(F2==False):
+			print("V")
+			return False
+		return AST(Lexema(MULT,"*"),[F1,F2])
+	return F1
 
 
 def F(L):
 	global i
 	if(L[i].typ==MINUS):
 		i+=1
-		return F(L)
+		F1=F(L)
+		return AST(Lexema(MINUS,"-"),[F1])
 	if(L[i].typ==OP):
 		print(L[i].val)
 		i+=1
-		if(not E(L)):
+		F1=E(L)
+		if(F1==False):
+			print("W")
 			return False
 		print(L[i].val)
 		i+=1
-		return L[i-1].typ==CP
+		if(L[i-1].typ!=CP):
+			print("X")
+			return False
+		return F1
 	if(L[i].typ==VAR or L[i].typ==INT):
 		print(L[i].val)
 		i+=1
-		return True
+		return AST(L[i-1],[])
+	print("Y")
 	return False
 		
 
 test = "exists (e0, e1: 12e1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79e1 >= >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and 81e1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95e1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0)"
 
-test2 = "exists(e0, lol: exists (e1,e2,e3: not ( e0 = e1 + e2 + e3 ) and exists (e4, e4 : lol <= e1 - e2 + e3 ) ) ) "
+test2 = "exists(e0, lol: exists (e1,e2,e3: not ( e0 = e1 + e2 + e3 ) and exists ( e4 : lol <= e1 - e2 + e3 ) ) ) "
 
 
 lex_list=get_lexema_list(test2)
@@ -196,7 +240,7 @@ for l in lex_list:
 print(lol)
 print("End")'''
 	
-
-	
-print(P(lex_list))
-		
+F1=P(lex_list)
+print("########################################################")
+if(F1!=False):	
+	print(F1.DepthWalk())
