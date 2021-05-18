@@ -74,88 +74,88 @@ def P(L):
 	if(i==len(L)):
 		return True
 	elif(L[i].typ==OP):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		F1=P(L)
 		if(F1==False):
-			print("C")
+			#print("C")
 			return False
 		if(not(L[i].typ==CP)):
-			print("D")
+			#print("D")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		return F1
 	elif(L[i].typ==AND or L[i].typ==OR):
 		Operator=L[i]
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		if(L[i].typ!=OP):
-			print("E")
+			#print("E")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1			
 		F1=P(L)
 		if(L[i].typ!=COMA):
-			print(L[i].val)
-			print("F")
+			#print(L[i].val)
+			#print("F")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1			
 		F2=P(L)
 		if(L[i].typ!=CP):
-			print("G")
+			#print("G")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1	
 		return Junction(Operator,[F1,F2])	
 
 	elif(L[i].typ==EXQ):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		if(not L[i].typ==OP):
 			#print("Z")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		VarList=VL(L)
 		if(VarList==False):
-			print("F2")
+			#print("F2")
 			return False
 		F1=P(L)
 		if(F1==False):
-			print("G2")
+			#print("G2")
 			return False
 		F1=Exists(VarList,F1)
 		if(L[i].typ!=CP):
-			print("H")
+			#print("H")
 			return False	
-		print(L[i].val)	
+		#print(L[i].val)	
 		i+=1
 		return F1
 	elif(L[i].typ==NOT):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		if(L[i].typ!=OP):
-			print("I")
+			#print("I")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		F1=P(L)
 		if(F1==False):
-			print("J")
+			#print("J")
 			return False
 		F1=F1.Not()
 		if(not L[i].typ==CP):
-			print("K")
+			#print("K")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		return F1
 	else:
 		F1=D(L)
 		if(F1==False):
-			print("L")
+			#print("L")
 			return False
 		return F1
 		
@@ -166,15 +166,15 @@ def D(L):
 	global i
 	c=C(L)
 	if(c==False):
-		print("NN")
+		#print("NN")
 		return False
 	conjunctionSet=[c]
 	while(L[i].typ == OR):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		c=C(L)
 		if(c==False):
-			print("OO")
+			#print("OO")
 			return False
 		conjunctionSet.append(c)
 	return Junction(OR,conjunctionSet)
@@ -183,15 +183,15 @@ def C(L):
 	global i
 	c=CONSTRAINT(L)
 	if(c==False):
-		print("LL")
+		#print("LL")
 		return False
 	constraintSet=[c]
 	while(L[i].typ == AND):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		c=CONSTRAINT(L)
 		if(c==False):
-			print("MM")
+			#print("MM")
 			return False
 		constraintSet.append(c)
 	return Junction(AND,constraintSet)
@@ -207,36 +207,37 @@ def CONSTRAINT(L):
 		print("AA")
 		return False
 	if(L[i].typ==MOD):
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
-		dividende=S(L)
-		if(dividende==False or (L[i].typ != EQ and L[i].typ != NE) or not(dividende.isConstant())):
+		dividende=sumi
+		diviseur=S(L)
+		if(diviseur==False or (L[i].typ != EQ and L[i].typ != NE) or not(diviseur.isConstant())):
 			print("PP")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		cmp=L[i].typ
 		i+=1
 		res=S(L)
 		if(not res.isZero()):
-			print("QQ")
+			#print("QQ")
 			return False
-		return DivConstraint(sumi,dividende,isNot=(cmp==NE))
+		return DivConstraint(diviseur,dividende,isNot=(cmp==NE))
 
 	sumSet.append(sumi)
 	if(not L[i].IsCmpOperator()):
-		print("CC")
+		#print("CC")
 		return False
 	cmp=L[i].typ
 
 	while(L[i].IsCmpOperator()):
 		if(L[i].typ!=cmp):
-			print("DD")
+			#print("DD")
 			return False
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		sumi=S(L)
 		if(sumi==False):
-			print("BB")
+			#print("BB")
 			return False
 		sumSet.append(sumi)
 	return LinearConstraint(cmp,sumSet)
@@ -251,18 +252,18 @@ def S(L):
 	isMinus=False
 	if(L[i].typ==MINUS):
 		isMinus=True
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 
 	if(L[i].typ!=INT and L[i].typ!=VAR):
-		print("EE")
+		#print("EE")
 		return False
 	if(L[i].typ==VAR):
 		if(isMinus):
 			f=Factor(var=L[i].val,const=-1)
 		else:
 			f=Factor(var=L[i].val, const=1)
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 	else:
 		if(isMinus):
@@ -270,11 +271,11 @@ def S(L):
 		else:
 			constf=int(L[i].val)
 		varf=None
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		if(L[i].typ==VAR):
 			varf=str(L[i].val)
-			print(L[i].val)
+			#print(L[i].val)
 			i+=1
 		f=Factor(var=varf,const=constf)
 	F=[]
@@ -283,10 +284,10 @@ def S(L):
 		isMinus=False
 		if(L[i].typ==MINUS):
 			isMinus=True
-		print(L[i].val)
+		#print(L[i].val)
 		i+=1
 		if(L[i].typ!=INT and L[i].typ!=VAR):
-			print("GG")
+			#print("GG")
 			return False
 		if(L[i].typ==VAR):
 			if(isMinus):
@@ -300,11 +301,11 @@ def S(L):
 			else:
 				constf=int(L[i].val)
 			varf=None
-			print(L[i].val)
+			#print(L[i].val)
 			i+=1
 			if(L[i].typ==VAR):
 				varf=str(L[i].val)
-				print(L[i].val)
+				#print(L[i].val)
 				i+=1
 			f=Factor(var=varf,const=constf)
 		F.append(f)
@@ -312,21 +313,23 @@ def S(L):
 
 #T -> T * F  | TF | F
 
-test = "Exists(x:not(53x + 13y + 5 + 2z < 8 + 8 + 8a))"
+test = "Exists(x: x + 2y < 16 and 0 > 5 - y - x and x % 3 == 0)"
 
 LL=get_lexema_list(test)
 
 F1 = Parse(LL)
 
+print(test)
 print(F1.toString())
-
+F2=F1.cooper()
+print(F2.toString())
 #print(F1.ASTtoZ3())
  
 
 
-test = "exists (e0: 12x1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79x1 >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and \
-81x1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95x1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0 or 3x1 < 5x2 + 3x3 and \
-5x2 + 8x3 + 3x4 + e0 <= 0)"
+#test = "exists (e0: 12x1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79x1 >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and \
+#81x1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95x1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0 or \
+#5x2 + 8x3 + 3x4 + e0 <= 0 and e0 % 45 == 0 and 2e0 % 13 == 0 )"
 
 #test2 = "exists(e0: exists (e1,e2,e3 : not ( e0 = e1 + e2 + e3 ) and exists ( e4 : lol <= e1 - e2 + e3 ) ) ) "
 
@@ -336,12 +339,12 @@ lex_list=get_lexema_list(test)
 	print (l.val)'''
 	
 F1=Parse(lex_list)
-F2=F1.cooper()
-F1=Parse(lex_list).toString()
+#F2=F1.cooper()
+#F1=Parse(lex_list).toString()
 
-print(test)
-print(F1)
-print(F2.toString())
+#print(test)
+#print(F1.toString())
+#print(F2.toString())
 
 #lex_list=get_lexema_list(A)
 #print(A)
