@@ -313,8 +313,10 @@ def S(L):
 
 #T -> T * F  | TF | F
 
-test = "Exists(x: x + 2y < 16 and 0 > 5 - y - x and x % 3 == 0)"
-
+test = "Exists(x: x > 5 and x < 16 and x % 3 == 0)"
+test = "exists (e0: 12x1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79x1 >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and \
+81x1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95x1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0 or \
+5x2 + 8x3 + 3x4 + e0 <= 0 and e0 % 45 == 0 and 2e0 % 13 == 0 )"
 LL=get_lexema_list(test)
 
 F1 = Parse(LL)
@@ -327,9 +329,7 @@ print(F2.toString())
  
 
 
-#test = "exists (e0: 12x1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79x1 >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and \
-#81x1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95x1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0 or \
-#5x2 + 8x3 + 3x4 + e0 <= 0 and e0 % 45 == 0 and 2e0 % 13 == 0 )"
+
 
 #test2 = "exists(e0: exists (e1,e2,e3 : not ( e0 = e1 + e2 + e3 ) and exists ( e4 : lol <= e1 - e2 + e3 ) ) ) "
 
