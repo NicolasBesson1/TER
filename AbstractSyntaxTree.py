@@ -1,3 +1,4 @@
+import z3
 from LexicalAnalysis import *
 from Constants import *
 import numpy as np
@@ -9,6 +10,8 @@ class Boolean:
         return Boolean(not(self.val))
     def toString(self):
         return str(self.val)
+    def toZ3(self):
+    	return self.val
 
 class Factor:
     def __init__(self, var=None, const=1):
@@ -31,8 +34,8 @@ class Factor:
         return Factor(var=self.var,const=-self.const)
     def toZ3(self):
         if(self.var!=None):
-            return self.const*z3.Int(self.var)
-        return self.const
+            return z3.IntVal(int(self.const))*z3.Int(self.var)
+        return z3.IntVal(int(self.const))
 
 class Sum:
     def __init__(self,factorSet):
@@ -69,11 +72,16 @@ class Sum:
         return Sum(fs)
     def toZ3(self):
         res=0
+        #print(self.toString())
         for f in self.factorSet:
+            #print(res)
             if res==0:
                 res=f.toZ3()
             else:
-                res+=f.toZ3()
+                if(f.const<0):
+                    res-=f.inverse().toZ3()
+                else:
+                    res+=f.toZ3()
         return res
 class LinearConstraint:
     def __init__(self,cmp,sumSet):
@@ -182,7 +190,7 @@ class LinearConstraint:
   
     def isExists(self):
         return False
-    def replaceax(self,t):
+    def replaceax(self,t,x):
         return LinearConstraint(self.cmp,[t,self.sumSet[1]])
     def toZ3(self):
         cmp=self.cmp
@@ -252,10 +260,10 @@ class Junction:
         return T    
     def isExists(self):
         return False
-    def replaceax(self,t):
+    def replaceax(self,t,x):
         C=[]
         for c in self.constSet:
-            r=c.replaceax(t)
+            r=c.replaceax(t,x)
             if(r!=None):
                 C.append(r)
         return Junction(self.op,C)
@@ -270,6 +278,8 @@ class Junction:
                 res=c.toZ3()
             else:
                 res=op(c.toZ3(),res)
+            #print(res)
+        
         return res
 class Exists:
     def __init__(self,varList,constraint,isNot=False):
@@ -305,7 +315,7 @@ class Exists:
 
         #Get the formula : P(x)[ T \ ax < t, F \ ax > t ]  (-inf projection)
         f=self.constraint.minfp(x)
-        print(f.toString())
+        #print(f.toString())
         #Get the set of all divisors ( the set of d such that P contains a constraint x % d = 0 )
         D=self.constraint.divisors(x)
 
@@ -327,10 +337,10 @@ class Exists:
         
         if(len(A)!=0):
             dp=np.lcm.reduce(A)
-            print("dp: ", dp)
+            #print("dp: ", dp)
             if dp==0:
                 return f
-        print(A)
+        #print(A)
 
         if d==None:
             d=1
@@ -342,7 +352,7 @@ class Exists:
             for t in T:
                 #Compute P[t+i \ ax] and dp | t+i for each i from 1 to d, and for each ax in such that P(x) contains ax < t
                 t=t.add(Factor(var=None,const=i))
-                r=self.constraint.replaceax(t)
+                r=self.constraint.replaceax(t,x)
                 if r!=None:
                     S.append( Junction( AND , [ r, DivConstraint( Sum ( [ Factor ( const=dp, var=None) ] ), t ) ] ) )
         f=Junction(OR,[f] + S)
@@ -365,27 +375,45 @@ class DivConstraint:
         self.diviseur=diviseur
         self.dividende=dividende
         self.isNot=isNot
+        
     def toString(self):
         return self.dividende.toString() + " % " + self.diviseur.toString() + " = 0"
+        
     def Not(self):
         self.isNot=not(self.isNot)
         return self
+        
     def divisors(self,x):
         print(self.diviseur.factorSet[0].const)
         if self.dividende.factorSet[0].var==x and len(self.dividende.factorSet)==1:
             return [self.diviseur.factorSet[0].const*self.dividende.factorSet[0].const]
         return []
+        
     def minfp(self,x):
         return None
+        
     def coefficients(self,x):
         return []
+        
     def isolate(self,x):
         return self
+        
     def getterms(self):
         return []
+        
     def isExists(self):
         return False
-    def replaceax(self,t):
-        return None
+        
+    def replaceax(self,t,x):
+    	new_dividende=[]
+    	for f in self.dividende.factorSet:
+    	    if f.var==x:
+    	        new_dividende+=t.factorSet
+    	    else:
+    	        new_dividende.append(f)
+    		
+    	res=DivConstraint(self.diviseur,Sum(new_dividende),self.isNot)
+    	return res      
     def toZ3(self):
         return self.dividende.toZ3() % self.diviseur.toZ3() == 0
+        
