@@ -11,7 +11,7 @@ class Boolean:
     def toString(self):
         return str(self.val)
     def toZ3(self):
-    	return self.val
+    	return z3.BoolVal(self.val)
 
 class Factor:
     def __init__(self, var=None, const=1):
@@ -132,7 +132,7 @@ class LinearConstraint:
         return []
     def coefficients(self,x):
         #print(self.sumSet[0].factorSet[0].var)
-        if(self.sumSet[0].factorSet[0].var==x and self.cmp==LT):
+        if(self.sumSet[0].factorSet[0].var==x and self.cmp==GT):
             return [self.sumSet[0].factorSet[0].const]
         return []
     def isolate(self,x):
@@ -195,17 +195,19 @@ class LinearConstraint:
     def toZ3(self):
         cmp=self.cmp
         if(cmp==EQ):
-            return self.sumSet[0].toZ3() == self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() == self.sumSet[1].toZ3()
         elif(cmp==NE):
-            return self.sumSet[0].toZ3() != self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() != self.sumSet[1].toZ3()
         elif(cmp==LT):
-            return self.sumSet[0].toZ3() < self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() < self.sumSet[1].toZ3()
         elif(cmp==LE):
-            return self.sumSet[0].toZ3() <= self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() <= self.sumSet[1].toZ3()
         elif(cmp==GT):
-            return self.sumSet[0].toZ3() > self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() > self.sumSet[1].toZ3()
         elif(cmp==GE):
-            return self.sumSet[0].toZ3() >= self.sumSet[1].toZ3()
+            res = self.sumSet[0].toZ3() >= self.sumSet[1].toZ3()
+        #print(res)
+        return res
 
 
 
@@ -319,7 +321,7 @@ class Exists:
         #Get the set of all divisors ( the set of d such that P contains a constraint x % d = 0 )
         D=self.constraint.divisors(x)
 
-        #Get all the coefficients of x in ax < t ( the set of a such that P contains a constraint ax < t )
+        #Get all the coefficients of x in ax > t ( the set of a such that P contains a constraint ax > t )
         A=self.constraint.coefficients(x)
 
         #Get all the terms in ax > t (the set of t such that P contains a constraint ax > t)
@@ -367,7 +369,8 @@ class Exists:
     def isExists(self):
         return True
     def toZ3(self):
-        return z3.Exists(self.varList,self.constraint.toZ3())
+        res=z3.Exists([z3.Int(v) for v in self.varList],self.constraint.toZ3())
+        return res
 
 
 class DivConstraint:
@@ -415,5 +418,8 @@ class DivConstraint:
     	res=DivConstraint(self.diviseur,Sum(new_dividende),self.isNot)
     	return res      
     def toZ3(self):
-        return self.dividende.toZ3() % self.diviseur.toZ3() == 0
+        
+        res = (self.dividende.toZ3() % self.diviseur.toZ3()) == 0
+        #print(res)
+        return res
         
