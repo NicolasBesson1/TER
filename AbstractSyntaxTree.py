@@ -12,6 +12,8 @@ class Boolean:
         return str(self.val)
     def toZ3(self):
     	return z3.BoolVal(self.val)
+    def cooper(self,x=None):
+    	return self
 
 class Factor:
     def __init__(self, var=None, const=1):
@@ -172,21 +174,29 @@ class LinearConstraint:
             if(f.var==x):
                 A.append(f.inverse())
             else:
-                B.append(f)        
+                B.append(f)    
+           
         a=0
+        cp=self.cmp
         for f in A:
             a+=f.const
         if(a<0):
             a=-a
             for i in range(len(B)):
                 B[i]=B[i].inverse()
+            if(cp==LT):
+                cp=GT
+            else:
+                cp=LT
+            
         ax=Sum([Factor(var=x,const=a)])
         t=Sum(B)
-        return LinearConstraint(self.cmp,[ax,t])
+        return LinearConstraint(cp,[ax,t])
     def getterms(self):
-        if(self.cmp==GT):
-            return [self.sumSet[1]]
+        if self.cmp==GT:
+        	return [self.sumSet[1]]
         return []
+        
   
     def isExists(self):
         return False
@@ -208,7 +218,8 @@ class LinearConstraint:
             res = self.sumSet[0].toZ3() >= self.sumSet[1].toZ3()
         #print(res)
         return res
-
+    def cooper(self,x=None):
+    	return self
 
 
 class Junction:
@@ -219,6 +230,7 @@ class Junction:
         op=self.op
         if(len(self.constSet)==0):
             return ""
+        strOp=""
         if(op==AND):
             strOp=" and "
         if(op==OR):
@@ -283,6 +295,9 @@ class Junction:
             #print(res)
         
         return res
+    def cooper(self,x=None):
+        return self
+    
 class Exists:
     def __init__(self,varList,constraint,isNot=False):
         self.varList=varList
@@ -311,21 +326,25 @@ class Exists:
         if(x==None):
             x=self.varList[-1]
 
-        #Restrain the constraints to ax < t, ax > t and x % d = 0 
-        self=self.isolate(x)
-        print(self.toString())
+        #Restrain the constraints to ax < t, ax > t and x % d = 0
+        tmp=self.isolate(x) 
+        
+        #print(self.toString())
 
         #Get the formula : P(x)[ T \ ax < t, F \ ax > t ]  (-inf projection)
-        f=self.constraint.minfp(x)
+        f=tmp.constraint.minfp(x)
+        
+        
         #print(f.toString())
-        #Get the set of all divisors ( the set of d such that P contains a constraint x % d = 0 )
-        D=self.constraint.divisors(x)
+        
+        #Get the set of all divisors ( the set of d such that P contains a constraint x % d == 0 )
+        D=tmp.constraint.divisors(x)
 
         #Get all the coefficients of x in ax > t ( the set of a such that P contains a constraint ax > t )
-        A=self.constraint.coefficients(x)
+        A=tmp.constraint.coefficients(x)
 
         #Get all the terms in ax > t (the set of t such that P contains a constraint ax > t)
-        T=self.constraint.getterms()
+        T=tmp.constraint.getterms()
         #print(D)
         #print(A)
         d=None
@@ -334,14 +353,10 @@ class Exists:
         if(len(D)!=0):
             d=np.lcm.reduce(D)
             #print(d)
-            if d==0:
-                return f
         
         if(len(A)!=0):
             dp=np.lcm.reduce(A)
             #print("dp: ", dp)
-            if dp==0:
-                return f
         #print(A)
 
         if d==None:
@@ -350,11 +365,12 @@ class Exists:
             dp=1
         
         S=[]
+        #print(T,d)
         for i in range(1,d+1):
             for t in T:
                 #Compute P[t+i \ ax] and dp | t+i for each i from 1 to d, and for each ax in such that P(x) contains ax < t
                 t=t.add(Factor(var=None,const=i))
-                r=self.constraint.replaceax(t,x)
+                r=tmp.constraint.replaceax(t,x)
                 if r!=None:
                     S.append( Junction( AND , [ r, DivConstraint( Sum ( [ Factor ( const=dp, var=None) ] ), t ) ] ) )
         f=Junction(OR,[f] + S)
@@ -387,10 +403,10 @@ class DivConstraint:
         return self
         
     def divisors(self,x):
-        print(self.diviseur.factorSet[0].const)
-        if self.dividende.factorSet[0].var==x and len(self.dividende.factorSet)==1:
-            return [self.diviseur.factorSet[0].const*self.dividende.factorSet[0].const]
-        return []
+        #print(self.diviseur.factorSet[0].const)
+        
+        return [self.diviseur.factorSet[0].const]
+        
         
     def minfp(self,x):
         return None
@@ -422,4 +438,5 @@ class DivConstraint:
         res = (self.dividende.toZ3() % self.diviseur.toZ3()) == 0
         #print(res)
         return res
-        
+    def cooper(self,x=None):
+    	return self
