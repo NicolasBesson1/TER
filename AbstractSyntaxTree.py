@@ -85,6 +85,11 @@ class Sum:
                 else:
                     res+=f.toZ3()
         return res
+    def mult(self,n):
+        res=[]
+        for f in self.factorSet:
+            res.append(Factor(var=f.var,const=f.const*n))
+        return res
 class LinearConstraint:
     def __init__(self,cmp,sumSet):
         self.cmp=cmp
@@ -134,9 +139,11 @@ class LinearConstraint:
         return []
     def coefficients(self,x):
         #print(self.sumSet[0].factorSet[0].var)
-        if(self.sumSet[0].factorSet[0].var==x and self.cmp==GT):
-            return [self.sumSet[0].factorSet[0].const]
+        res=self.sumSet[0].factorSet[0].const
+        if res!=0:
+            return [res]
         return []
+        
     def isolate(self,x):
         sumSet=self.sumSet
         #A < B < C replaced with A < B and B < C
@@ -220,6 +227,16 @@ class LinearConstraint:
         return res
     def cooper(self,x=None):
     	return self
+    	
+    def multbylcm(self, lcm, x):
+        sumA=self.sumSet[0]
+        a=sumA.factorSet[0].const
+        if a==0:
+            return self
+        sumA=sumA.mult(lcm//a)
+        sumB=self.sumSet[1].mult(lcm//a)
+        return LinearConstraint(self.cmp,[Sum(sumA),Sum(sumB)])
+        
 
 
 class Junction:
@@ -297,6 +314,13 @@ class Junction:
         return res
     def cooper(self,x=None):
         return self
+        
+    def multbylcm(self,lcm,x):
+        tmp=[]
+        for c in self.constSet:
+            tmp.append(c.multbylcm(lcm,x))
+        return Junction(self.op,tmp)
+        
     
 class Exists:
     def __init__(self,varList,constraint,isNot=False):
@@ -312,7 +336,6 @@ class Exists:
         self.isNot=not(self.isNot)
         return self
     def cooper(self,x=None):
-
         if(self.constraint.isExists()):
             self.constraint=self.constraint.cooper()
         #Replace Exists( [x0, ..., xn], P(x) ) with Exists([x0], Exists([x1], ... Exists( [xn], P(x) ) ) ... )
@@ -326,7 +349,7 @@ class Exists:
         if(x==None):
             x=self.varList[-1]
 
-        #Restrain the constraints to ax < t, ax > t and x % d = 0
+        #Restrain the constraints to ax < t, ax > t and (ax + t) % d == 0
         tmp=self.isolate(x) 
         
         #print(self.toString())
@@ -334,19 +357,13 @@ class Exists:
         #Get the formula : P(x)[ T \ ax < t, F \ ax > t ]  (-inf projection)
         f=tmp.constraint.minfp(x)
         
+        #Get the set of all divisors ( the set of d such that P contains a constraint (ax + t) % d == 0 )
+        D=self.constraint.divisors(x)
+        #Get all the coefficients of x in constraints ax > t, ax < t ( the set of a such that P contains a constraint ax > t, ax < t)
+        A=self.constraint.coefficients(x)
         
-        #print(f.toString())
         
-        #Get the set of all divisors ( the set of d such that P contains a constraint x % d == 0 )
-        D=tmp.constraint.divisors(x)
-
-        #Get all the coefficients of x in ax > t ( the set of a such that P contains a constraint ax > t )
-        A=tmp.constraint.coefficients(x)
-
-        #Get all the terms in ax > t (the set of t such that P contains a constraint ax > t)
-        T=tmp.constraint.getterms()
-        #print(D)
-        #print(A)
+        
         d=None
         dp=None
 
@@ -364,6 +381,17 @@ class Exists:
         if dp==None:
             dp=1
         
+        #multiply every constraint ax cmp t with dp*x cmp (dp/a)*t (giving a constraint x' cmp a't, with a' being dp/a
+        tmp=tmp.multbylcm(dp,x)
+        #print(f.toString())
+        
+
+
+        #Get all the terms in ax > t (the set of t such that P contains a constraint ax > t)
+        T=tmp.constraint.getterms()
+        #print(D)
+        #print(A)
+
         S=[]
         #print(T,d)
         for i in range(1,d+1):
@@ -387,7 +415,8 @@ class Exists:
     def toZ3(self):
         res=z3.Exists([z3.Int(v) for v in self.varList],self.constraint.toZ3())
         return res
-
+    def multbylcm(self, lcm, x):
+        return Exists(self.varList, self.constraint.multbylcm(lcm,x))
 
 class DivConstraint:
     def __init__(self, diviseur, dividende, isNot=False):
@@ -412,6 +441,9 @@ class DivConstraint:
         return None
         
     def coefficients(self,x):
+        for f in dividende.factorSet:
+    	    if(f.var==x and f.const!=0):
+    	        return [f.const]
         return []
         
     def isolate(self,x):
@@ -440,3 +472,12 @@ class DivConstraint:
         return res
     def cooper(self,x=None):
     	return self
+    def multbylcm(self,lcm,x):
+        a=0
+        for f in self.dividende.factorSet:
+            if f.var==x:
+                a=f.const
+        if a==0:
+            return self
+        return DivConstraint(diviseur.mult(lcm//a),dividende.mult(lcm//a))
+        
