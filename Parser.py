@@ -336,17 +336,17 @@ def S(L):
 
 #T -> T * F  | TF | F
 
-def projection_test(n=3,m=3):
+def projection_test(n=5,m=7):
 	P=polyedre(n=n,m=m)
 	F1=conjunction(P)
 	print("Random polyhedron", F1)
 	E1=z3.Exists(z3.Int("x0"),F1)
-	print("Expected formula after projection", E1)
-	t=z3.Tactic("qe")
-	Formula1 = t(E1)
-	print("Expected formula after projection, with z3 quantifier elimination", Formula1)
+	#print("Expected formula after projection", E1)
+	#t=z3.Tactic("qe")
+	#Formula1 = t(E1)
+	#print("Expected formula after projection, with z3 quantifier elimination", Formula1)
 	a=Parse(get_lexema_list(str(E1))).cooper().toZ3()
-	print("Expected formula after projection, with my implementation of quantifier elimination", a)
+	#print("Expected formula after projection, with my implementation of quantifier elimination", a)
 	
 	F2=isl_intersection(P)
 	Fp=project(F2)
@@ -355,33 +355,34 @@ def projection_test(n=3,m=3):
 	
 	LL=get_lexema_list(Str)
 	E2=Parse(LL)
-	print("Formula given by ISL after projection", E2.toZ3())
-	Formula2=t(E2.toZ3())
+	#print("Formula given by ISL after projection", E2.toZ3())
+	#Formula2=t(E2.toZ3())
 	
-	print("Formula given by ISL after projection, after z3 quantifier elimination", Formula2)
+	#print("Formula given by ISL after projection, after z3 quantifier elimination", Formula2)
 	b=E2.cooper().toZ3()
-	print("Formula given by ISL after projection, after my implementation of quantifier elimination", b)	
+	#print("Formula given by ISL after projection, after my implementation of quantifier elimination", b)	
 
 	my_solver = z3.Solver()
 	
 	my_solver.add(z3.Xor(a,b))
-	print("Result with my implementation of quantifier elimination", my_solver.check()==z3.unsat)
+	r=my_solver.check()==z3.unsat
+	print("Result with my implementation of quantifier elimination", r)
+	return r
 	
 	
 	
 	
 	
+	#z3_solver = z3.Then("smt","qe").solver()
+	#z3_solver.add(z3.Xor(E1,E2.toZ3()))
+	#print("Result with z3 quantifier elimination", z3_solver.check()==z3.unsat)
 	
-	z3_solver = z3.Then("smt","qe").solver()
-	z3_solver.add(z3.Xor(E1,E2.toZ3()))
-	print("Result with z3 quantifier elimination", z3_solver.check()==z3.unsat)
-	
-	z3_solver = z3.Then("smt","qe").solver()
-	z3_solver.add(z3.Not(z3.Implies(E1,E2.toZ3())))
-	print("A => B", z3_solver.check()==z3.unsat)
-	z3_solver = z3.Then("smt", "qe").solver()
-	z3_solver.add(z3.Not(z3.Implies(E2.toZ3(),E1)))
-	print("B => A", z3_solver.check()==z3.unsat)
+	#z3_solver = z3.Then("smt","qe").solver()
+	#z3_solver.add(z3.Not(z3.Implies(E1,E2.toZ3())))
+	#print("A => B", z3_solver.check()==z3.unsat)
+	#z3_solver = z3.Then("smt", "qe").solver()
+	#z3_solver.add(z3.Not(z3.Implies(E2.toZ3(),E1)))
+	#print("B => A", z3_solver.check()==z3.unsat)
 	
 	
 	'''SE=str(E)
@@ -409,7 +410,6 @@ def projection_test(n=3,m=3):
 	
 	
 
-test = "(" + get_formula(isl_polyhedron()) + ")"
 #print(test)
 '''test = "exists (e0: 12x1 <= 93 - 90x2 + 35x3 -  68x4 + 87x5 - 92x6 - 3e0 and 79x1 >= -73 + 99x2 + 34x3 - 76x4 - 6x5 + 92x6 - 5e0 and \
 81x1 >= -21 - 67x2 - 40x3 + 19x4 + 72x5 - x6 - 92e0 and 95x1 >= -54 + 16x2 + 62x3 - 73x4 - 44x5 - 4x6 + 89e0 or \
@@ -460,9 +460,9 @@ test = "(" + get_formula(isl_polyhedron()) + ")"
 
 #lex_list=get_lexema_list(A)
 #print(A)
-
-
-projection_test()
+r=projection_test()
+while(r):
+    projection_test()
 
 
 
