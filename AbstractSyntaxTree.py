@@ -13,6 +13,7 @@ class Boolean:
     def toZ3(self):
     	return z3.BoolVal(self.val)
     def cooper(self,x=None):
+    	print("BOOLEAN !!! ")
     	return self
 
 class Factor:
@@ -188,6 +189,7 @@ class LinearConstraint:
         for f in A:
             a+=f.const
         if(a<0):
+            
             a=-a
             for i in range(len(B)):
                 B[i]=B[i].inverse()
@@ -213,20 +215,33 @@ class LinearConstraint:
         cmp=self.cmp
         if(cmp==EQ):
             res = self.sumSet[0].toZ3() == self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()==self.sumSet[i+1].toZ3())
         elif(cmp==NE):
             res = self.sumSet[0].toZ3() != self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()!=self.sumSet[i+1].toZ3())
         elif(cmp==LT):
             res = self.sumSet[0].toZ3() < self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()<self.sumSet[i+1].toZ3())
         elif(cmp==LE):
             res = self.sumSet[0].toZ3() <= self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()<=self.sumSet[i+1].toZ3())
         elif(cmp==GT):
             res = self.sumSet[0].toZ3() > self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()>self.sumSet[i+1].toZ3())
         elif(cmp==GE):
             res = self.sumSet[0].toZ3() >= self.sumSet[1].toZ3()
+            for i in range(1,len(self.sumSet)-1):
+                res = z3.And(res,self.sumSet[i].toZ3()>=self.sumSet[i+1].toZ3())
         #print(res)
         return res
     def cooper(self,x=None):
-    	return self
+        print("LINEAR CONSTRAINT !")
+        return self
     	
     def multbylcm(self, lcm, x):
         sumA=self.sumSet[0]
@@ -313,6 +328,7 @@ class Junction:
         
         return res
     def cooper(self,x=None):
+        print("JUNCTION !!! ")
         return self
         
     def multbylcm(self,lcm,x):
@@ -323,24 +339,24 @@ class Junction:
         
     
 class Exists:
-    def __init__(self,varList,constraint,isNot=False):
+    def __init__(self,varList,formula,isNot=False):
         self.varList=varList
-        self.constraint=constraint
+        self.formula=formula
         self.isNot=isNot
     def toString(self):
         if(self.isNot):
-            return "Not( Exists( " + str(self.varList) + ", " + self.constraint.toString() + " ) )"
+            return "Not( Exists( " + str(self.varList) + ", " + self.formula.toString() + " ) )"
         else:
-            return "Exists( " + str(self.varList) + ", " + self.constraint.toString() + " ) "
+            return "Exists( " + str(self.varList) + ", " + self.formula.toString() + " ) "
     def Not(self):
         self.isNot=not(self.isNot)
         return self
     def cooper(self,x=None):
-        if(self.constraint.isExists()):
-            self.constraint=self.constraint.cooper()
+        if(self.formula.isExists()):
+            self.formula=self.formula.cooper()
         #Replace Exists( [x0, ..., xn], P(x) ) with Exists([x0], Exists([x1], ... Exists( [xn], P(x) ) ) ... )
         if(len(self.varList)>1):
-            res=self.constraint
+            res=self.formula
             for v in self.varList[::-1]:
                 res=Exists([v],res).cooper()
             return res
@@ -355,40 +371,45 @@ class Exists:
         #print(self.toString())
 
         #Get the formula : P(x)[ T \ ax < t, F \ ax > t ]  (-inf projection)
-        f=tmp.constraint.minfp(x)
+        f=tmp.formula.minfp(x)
         
-        #Get the set of all divisors ( the set of d such that P contains a constraint (ax + t) % d == 0 )
-        D=self.constraint.divisors(x)
         #Get all the coefficients of x in constraints ax > t, ax < t ( the set of a such that P contains a constraint ax > t, ax < t)
-        A=self.constraint.coefficients(x)
+        A=tmp.formula.coefficients(x)
         
+        dp=None  #dp is the least common multiple of all the coefficients of x
+        if(len(A)!=0):
+            dp=np.lcm.reduce(A)
+            #print("dp: ", dp)
+        if dp==None:
+            dp=1            
+        #multiply every constraint ax cmp t with dp*x cmp (dp/a)*t (giving a constraint x' cmp a't, with a' being dp/a
+        tmp=tmp.multbylcm(dp,x)
+        #Construct formula : exists e0', F(e0') and dp | e0' 
         
-        
-        d=None
-        dp=None
+        tmp.formula=Junction(AND,[ tmp.formula, DivConstraint(Sum([Factor(const=dp)]),Sum([Factor(var=x)]))]) 
+                    
+        #Get the set of all divisors ( the set of d such that P contains a constraint (ax + t) % d == 0 )
+        D=tmp.formula.divisors(x)
 
+        d=None
         if(len(D)!=0):
             d=np.lcm.reduce(D)
             #print(d)
         
-        if(len(A)!=0):
-            dp=np.lcm.reduce(A)
-            #print("dp: ", dp)
+
         #print(A)
 
         if d==None:
             d=1
-        if dp==None:
-            dp=1
+
         
-        #multiply every constraint ax cmp t with dp*x cmp (dp/a)*t (giving a constraint x' cmp a't, with a' being dp/a
-        tmp=tmp.multbylcm(dp,x)
+
         #print(f.toString())
         
 
 
         #Get all the terms in ax > t (the set of t such that P contains a constraint ax > t)
-        T=tmp.constraint.getterms()
+        T=tmp.formula.getterms()
         #print(D)
         #print(A)
 
@@ -398,7 +419,7 @@ class Exists:
             for t in T:
                 #Compute P[t+i \ ax] and dp | t+i for each i from 1 to d, and for each ax in such that P(x) contains ax < t
                 t=t.add(Factor(var=None,const=i))
-                r=tmp.constraint.replaceax(t,x)
+                r=tmp.formula.replaceax(t,x)
                 if r!=None:
                     S.append( Junction( AND , [ r, DivConstraint( Sum ( [ Factor ( const=dp, var=None) ] ), t ) ] ) )
         f=Junction(OR,[f] + S)
@@ -406,17 +427,17 @@ class Exists:
         return f
 
     def isolate(self,x):
-        return Exists(self.varList,self.constraint.isolate(x),self.isNot)
+        return Exists(self.varList,self.formula.isolate(x),self.isNot)
 
     def replaceax(self,term):
-        return Exists(self.varList,self.constraint.replaceax(term))
+        return Exists(self.varList,self.formula.replaceax(term))
     def isExists(self):
         return True
     def toZ3(self):
-        res=z3.Exists([z3.Int(v) for v in self.varList],self.constraint.toZ3())
+        res=z3.Exists([z3.Int(v) for v in self.varList],self.formula.toZ3())
         return res
     def multbylcm(self, lcm, x):
-        return Exists(self.varList, self.constraint.multbylcm(lcm,x))
+        return Exists(self.varList, self.formula.multbylcm(lcm,x))
 
 class DivConstraint:
     def __init__(self, diviseur, dividende, isNot=False):
